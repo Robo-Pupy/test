@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人管家</title>
+<style>
+  /* ── 基础与变量 ── */
+  :root {
+    --bg: #f2efe9;
+    --card: #fdfcfa;
+    --text: #4a4a4a;
+    --text-sec: #8a8a8a;
+    --primary: #8fa3b8;
+    --primary-dark: #6b8299;
+    --primary-light: #c5d4e3;
+    --accent-green: #9ab88a;
+    --accent-orange: #d4a574;
+    --accent-red: #c97a7a;
+    --border: #e8e4de;
+    --shadow: 0 4px 16px rgba(74,74,74,0.06);
+    --shadow-hover: 0 8px 24px rgba(74,74,74,0.10);
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  /* ── 字体层级 ── */
+  h1 {
+    text-align: center;
+    margin-bottom: 28px;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 2px;
+  }
+  h2 {
+    font-size: 20px;
+    margin-bottom: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--primary-dark);
+  }
+
+  /* ── 日历 ── */
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 0 4px;
+  }
+  .calendar-header button {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 8px 18px;
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-sec);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow);
+  }
+  .calendar-header button:hover {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+  }
+  .calendar-header button:active {
+    transform: scale(0.94) translateY(0);
+    box-shadow: var(--shadow);
+  }
+  .calendar-header span {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.3s ease;
+  }
+  .calendar-grid:hover {
+    box-shadow: var(--shadow-hover);
+  }
+
+  .day-label {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-sec);
+    font-weight: 600;
+    padding: 10px 0;
+    letter-spacing: 1px;
+  }
+
+  .day-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    position: relative;
+    border: 2px solid transparent;
+    background: transparent;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text);
+  }
+  .day-cell:hover {
+    background: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(143,163,184,0.18);
+  }
+  .day-cell.today {
+    border-color: var(--primary);
+    background: rgba(143,163,184,0.12);
+    font-weight: 700;
+    color: var(--primary-dark);
+  }
+  .day-cell.selected {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(143,163,184,0.35);
+  }
+  .day-cell.selected:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 6px 18px rgba(143,163,184,0.45);
+  }
+  .day-cell.other-month {
+    color: #c5c1bb;
+    background: transparent;
+  }
+  .day-cell.other-month:hover {
+    background: rgba(143,163,184,0.06);
+  }
+
+  .day-dots {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    height: 6px;
+    align-items: center;
+    justify-content: center;
+  }
+  .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+  }
+  .dot.todo { background: var(--accent-orange); }
+  .dot.habit { background: var(--accent-green); }
+  .dot.done { background: #d0ccc6; }
+  .day-cell:hover .dot { transform: scale(1.3); }
+
+  /* ── 详情面板 ── */
+  .detail-panel {
+    background: var(--card);
+    border-radius: var(--radius-md);
+    padding: 28px;
+    margin-top: 28px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.5s cubic-bezier(0.4,0,0.2,1), transform 0.5s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s ease;
+    pointer-events: none;
+  }
+  .detail-panel.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .detail-panel:hover {
+    box-shadow: var(--shadow-hover);
+  }
+
+  .detail-date {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: var(--primary-dark);
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: 0.5px;
+  }
+
+  .sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 640px) {
+    .sections { grid-template-columns: 1fr; }
+    .container { padding: 20px 14px; }
+    h1 { font-size: 24px; }
+  }
+
+  .section {
+    background: #f7f5f2;
+    border-radius: var(--radius-sm);
+    padding: 22px;
+    border: 1px solid var(--border);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .section:hover {
+    box-shadow: 0 2px 10px rgba(74,74,74,0.05);
+    transform: translateY(-1px);
+  }
+  .section + .section {
+    margin-top: 0;
+  }
+  .detail-panel > .section {
+    margin-top: 24px;
+  }
+
+  /* ── 输入与按钮 ── */
+  .todo-input-wrap {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .todo-input-wrap input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-xl);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--card);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    outline: none;
+  }
+  .todo-input-wrap input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(143,163,184,0.15);
+  }
+  .todo-input-wrap input::placeholder {
+    color: #c5c1bb;
+  }
+
+  .btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 3px 10px rgba(143,163,184,0.25);
+    letter-spacing: 0.5px;
+  }
+  .btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(143,163,184,0.35);
+  }
+  .btn:active {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 2px 6px rgba(143,163,184,0.25);
+  }
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text-sec);
+    border: 1.5px solid var(--border);
+    box-shadow: none;
+  }
+  .btn-secondary:hover {
+    background: #f0ece6;
+    color: var(--text);
+    box-shadow: 0 3px 10px rgba(74,74,74,0.08);
+  }
+  .btn-secondary:active {
+    transform: scale(0.95);
+    box-shadow: none;
+  }
+
+  /* ── 待办列表 ── */
+  .todo-list { list-style: none; }
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    transition: opacity 0.2s ease;
+    animation: slideIn 0.3s ease both;
+  }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-item input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+  }
+  .todo-item span {
+    flex: 1;
+    font-size: 15px;
+    color: var(--text);
+    transition: color 0.2s ease;
+  }
+  .todo-item.done span {
+    text-decoration: line-through;
+    color: var(--text-sec);
+  }
+  .todo-item .del-btn {
+    color: var(--accent-red);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+  }
+  .todo-item .del-btn:hover {
+    opacity: 1;
+    background: rgba(201,122,122,0.08);
+  }
+  .empty-tip {
+    color: var(--text-sec);
+    font-size: 14px;
+    text-align: center;
+    padding: 16px 0;
+    font-style: italic;
+  }
+
+  /* ── 习惯 ── */
+  .habit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .habit-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .habit-item:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 3px 10px rgba(74,74,74,0.05);
+    transform: translateX(2px);
+  }
+  .habit-name {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .habit-check {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2.5px solid #d8d4ce;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    color: transparent;
+    user-select: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+  }
+  .habit-check:hover {
+    border-color: var(--accent-green);
+    transform: scale(1.1);
+  }
+  .habit-check.checked {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(154,184,138,0.35);
+    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .water-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .water-count button {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-sec);
+    transition: all 0.2s ease;
+  }
+  .water-count button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary-dark);
+    transform: scale(1.1);
+  }
+  .water-count button:active {
+    transform: scale(0.9);
+  }
+  .water-count span {
+    font-size: 15px;
+    min-width: 36px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--primary-dark);
+  }
+
+  /* ── 本周打卡表 ── */
+  .week-table {
+    margin-top: 18px;
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+  }
+  .week-table table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .week-table th,
+  .week-table td {
+    border: 1px solid var(--border);
+    padding: 10px;
+    text-align: center;
+  }
+  .week-table th {
+    background: #f0ece6;
+    font-weight: 600;
+    color: var(--text-sec);
+    font-size: 12px;
+  }
+  .week-table td.ok {
+    color: var(--accent-green);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .week-table td.no {
+    color: #d8d4ce;
+  }
+  .week-table tr:hover td {
+    background: rgba(143,163,184,0.04);
+  }
+
+  /* ── 每日小结 ── */
+  .summary-wrap {
+    margin-top: 18px;
+    animation: fadeInUp 0.5s ease both;
+  }
+  .summary-text {
+    background: #f0ece6;
+    border-left: 4px solid var(--primary);
+    padding: 18px 22px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 15px;
+    line-height: 2;
+    color: var(--text);
+    white-space: pre-wrap;
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  /* ── 动画关键帧 ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0.6); }
+    60%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  /* 列表项依次入场 */
+  .todo-item:nth-child(1) { animation-delay: 0.03s; }
+  .todo-item:nth-child(2) { animation-delay: 0.06s; }
+  .todo-item:nth-child(3) { animation-delay: 0.09s; }
+  .todo-item:nth-child(4) { animation-delay: 0.12s; }
+  .todo-item:nth-child(5) { animation-delay: 0.15s; }
+  .todo-item:nth-child(6) { animation-delay: 0.18s; }
+  .todo-item:nth-child(7) { animation-delay: 0.21s; }
+  .todo-item:nth-child(8) { animation-delay: 0.24s; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>个人管家</h1>
+
+  <!-- 日历 -->
+  <div class="calendar-header">
+    <button id="prevMonth">上月</button>
+    <span id="monthLabel"></span>
+    <button id="nextMonth">下月</button>
+  </div>
+  <div class="calendar-grid" id="calendar"></div>
+
+  <!-- 详情面板 -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-date" id="detailDate"></div>
+    <div class="sections">
+      <!-- 待办清单 -->
+      <div class="section">
+        <h3>待办清单</h3>
+        <div class="todo-input-wrap">
+          <input type="text" id="todoInput" placeholder="输入新任务..." onkeydown="if(event.key==='Enter')addTodo()">
+          <button class="btn" onclick="addTodo()">添加</button>
+        </div>
+        <ul class="todo-list" id="todoList"></ul>
+      </div>
+
+      <!-- 习惯打卡 -->
+      <div class="section">
+        <h3>习惯打卡</h3>
+        <div class="habit-list" id="habitList"></div>
+      </div>
+    </div>
+
+    <!-- 本周打卡情况 -->
+    <div class="section">
+      <h3>本周打卡情况</h3>
+      <div class="week-table" id="weekTable"></div>
+    </div>
+
+    <!-- 每日小结 -->
+    <div class="section">
+      <h3>每日小结</h3>
+      <button class="btn btn-secondary" onclick="generateSummary()">生成今日总结</button>
+      <div class="summary-wrap" id="summaryWrap" style="display:none;">
+        <div class="summary-text" id="summaryText"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_KEY = 'personal_butler_data';
+let currentDate = new Date();
+let selectedDateStr = formatDate(new Date());
+let data = loadData();
+
+function formatDate(d) {
+  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+  return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function parseDate(str) {
+  const [y,m,d] = str.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch(e) { return {}; }
+}
+function saveData() {
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+}
+function getDayData(dateStr) {
+  if (!data[dateStr]) data[dateStr] = { todos: [], habits: {} };
+  return data[dateStr];
+}
+
+// 习惯定义
+const HABITS = [
+  { key: 'skincare', name: '护肤', type: 'check' },
+  { key: 'water', name: '喝水（8杯）', type: 'water' },
+  { key: 'sport', name: '运动30分钟', type: 'check' },
+  { key: 'vitC', name: '吃维C水果', type: 'check' }
+];
+
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDay = firstDay.getDay(); // 0=周日
+  const daysInMonth = lastDay.getDate();
+
+  document.getElementById('monthLabel').textContent = `${year}年${month + 1}月`;
+
+  const grid = document.getElementById('calendar');
+  grid.innerHTML = '';
+
+  const labels = ['日','一','二','三','四','五','六'];
+  labels.forEach(l => {
+    const el = document.createElement('div');
+    el.className = 'day-label';
+    el.textContent = l;
+    grid.appendChild(el);
+  });
+
+  const prevLastDay = new Date(year, month, 0).getDate();
+  for (let i = startDay - 1; i >= 0; i--) {
+    const d = prevLastDay - i;
+    const cell = createDayCell(d, true);
+    grid.appendChild(cell);
+  }
+
+  const todayStr = formatDate(new Date());
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cell = createDayCell(d, false, ds === todayStr, ds === selectedDateStr, ds);
+    grid.appendChild(cell);
+  }
+
+  const totalCells = startDay + daysInMonth;
+  const nextCells = (7 - (totalCells % 7)) % 7;
+  for (let d = 1; d <= nextCells; d++) {
+    const cell = createDayCell(d, true);
+    grid.appendChild(cell);
+  }
+}
+
+function createDayCell(day, otherMonth, isToday, isSelected, dateStr) {
+  const cell = document.createElement('div');
+  cell.className = 'day-cell';
+  if (otherMonth) cell.classList.add('other-month');
+  if (isToday) cell.classList.add('today');
+  if (isSelected) cell.classList.add('selected');
+  cell.innerHTML = `<div>${day}</div>`;
+
+  if (!otherMonth && dateStr) {
+    const dots = document.createElement('div');
+    dots.className = 'day-dots';
+    const dayData = getDayData(dateStr);
+    const hasTodo = dayData.todos && dayData.todos.length > 0;
+    const allDone = hasTodo && dayData.todos.every(t => t.done);
+    if (hasTodo) {
+      const d = document.createElement('span');
+      d.className = 'dot todo' + (allDone ? ' done' : '');
+      dots.appendChild(d);
+    }
+    const habitsDone = HABITS.filter(h => {
+      if (h.type === 'check') return dayData.habits[h.key];
+      return (dayData.habits[h.key] || 0) >= 8;
+    }).length;
+    if (habitsDone > 0) {
+      const d = document.createElement('span');
+      d.className = 'dot habit';
+      dots.appendChild(d);
+    }
+    cell.appendChild(dots);
+    cell.onclick = () => selectDate(dateStr);
+  }
+  return cell;
+}
+
+function selectDate(dateStr) {
+  selectedDateStr = dateStr;
+  const panel = document.getElementById('detailPanel');
+  panel.classList.remove('show');
+  // 强制重绘以触发过渡
+  void panel.offsetWidth;
+  document.getElementById('detailDate').textContent = `${dateStr} 详情`;
+  document.getElementById('summaryWrap').style.display = 'none';
+  renderCalendar();
+  renderTodos();
+  renderHabits();
+  renderWeekTable();
+  panel.classList.add('show');
+}
+
+// 待办
+function renderTodos() {
+  const list = document.getElementById('todoList');
+  const dayData = getDayData(selectedDateStr);
+  list.innerHTML = '';
+  if (!dayData.todos || dayData.todos.length === 0) {
+    list.innerHTML = '<li class="empty-tip">暂无任务</li>';
+    return;
+  }
+  dayData.todos.forEach((todo, idx) => {
+    const li = document.createElement('li');
+    li.className = 'todo-item' + (todo.done ? ' done' : '');
+    li.innerHTML = `
+      <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${idx})">
+      <span>${escapeHtml(todo.text)}</span>
+      <button class="del-btn" onclick="deleteTodo(${idx})">删除</button>
+    `;
+    list.appendChild(li);
+  });
+}
+function addTodo() {
+  const input = document.getElementById('todoInput');
+  const text = input.value.trim();
+  if (!text) return;
+  if (text.length > 200) {
+    alert('任务内容不能超过 200 字');
+    return;
+  }
+  const dayData = getDayData(selectedDateStr);
+  dayData.todos.push({ text, done: false });
+  saveData();
+  input.value = '';
+  renderTodos();
+  renderCalendar();
+}
+function toggleTodo(idx) {
+  const dayData = getDayData(selectedDateStr);
+  dayData.todos[idx].done = !dayData.todos[idx].done;
+  saveData();
+  renderTodos();
+  renderCalendar();
+}
+function deleteTodo(idx) {
+  const dayData = getDayData(selectedDateStr);
+  dayData.todos.splice(idx, 1);
+  saveData();
+  renderTodos();
+  renderCalendar();
+}
+
+// 习惯
+function renderHabits() {
+  const container = document.getElementById('habitList');
+  const dayData = getDayData(selectedDateStr);
+  container.innerHTML = '';
+  HABITS.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'habit-item';
+    // 安全取值：强制类型转换，防止 localStorage 被篡改后注入
+    let val = dayData.habits[h.key];
+    if (h.type === 'water') {
+      val = Math.max(0, Math.min(8, parseInt(val, 10) || 0));
+    } else {
+      val = val ? 1 : 0;
+    }
+    if (h.type === 'check') {
+      const checked = val ? 'checked' : '';
+      item.innerHTML = `
+        <span class="habit-name">${h.name}</span>
+        <div class="habit-check ${checked}" onclick="toggleHabit('${h.key}')">${val ? '✓' : ''}</div>
+      `;
+    } else {
+      item.innerHTML = `
+        <span class="habit-name">${h.name}</span>
+        <div class="water-count">
+          <button onclick="changeWater(-1)">-</button>
+          <span>${val}/8</span>
+          <button onclick="changeWater(1)">+</button>
+        </div>
+      `;
+    }
+    container.appendChild(item);
+  });
+}
+function toggleHabit(key) {
+  const dayData = getDayData(selectedDateStr);
+  dayData.habits[key] = dayData.habits[key] ? 0 : 1;
+  saveData();
+  renderHabits();
+  renderCalendar();
+  renderWeekTable();
+}
+function changeWater(delta) {
+  const dayData = getDayData(selectedDateStr);
+  let val = (dayData.habits['water'] || 0) + delta;
+  if (val < 0) val = 0;
+  if (val > 8) val = 8;
+  dayData.habits['water'] = val;
+  saveData();
+  renderHabits();
+  renderCalendar();
+  renderWeekTable();
+}
+
+// 本周打卡表
+function renderWeekTable() {
+  const base = parseDate(selectedDateStr);
+  const dow = base.getDay();
+  const monday = new Date(base);
+  monday.setDate(base.getDate() - ((dow + 6) % 7));
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(formatDate(d));
+  }
+
+  const weekLabels = ['周一','周二','周三','周四','周五','周六','周日'];
+  let html = '<table><thead><tr><th>习惯</th>';
+  days.forEach((ds, i) => {
+    const cls = ds === selectedDateStr ? ' style="background:#e8f2fc"' : '';
+    html += `<th${cls}>${weekLabels[i]}<br><small>${ds.slice(5)}</small></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  HABITS.forEach(h => {
+    html += `<tr><td style="text-align:left;font-weight:600;">${h.name}</td>`;
+    days.forEach(ds => {
+      const dayData = getDayData(ds);
+      const val = dayData.habits[h.key] || 0;
+      let ok = false;
+      if (h.type === 'check') ok = !!val;
+      else ok = val >= 8;
+      html += `<td class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '-'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('weekTable').innerHTML = html;
+}
+
+// 每日小结
+function generateSummary() {
+  const dayData = getDayData(selectedDateStr);
+  const totalTodo = dayData.todos ? dayData.todos.length : 0;
+  const doneTodo = dayData.todos ? dayData.todos.filter(t => t.done).length : 0;
+  const habitsDone = HABITS.filter(h => {
+    const val = dayData.habits[h.key] || 0;
+    if (h.type === 'check') return !!val;
+    return val >= 8;
+  });
+
+  let text = `${selectedDateStr} 每日小结\n\n`;
+  text += `今日共有 ${totalTodo} 个待办任务，已完成 ${doneTodo} 个`;
+  if (totalTodo > 0 && doneTodo === totalTodo) text += '，全部完成，真棒！';
+  else if (doneTodo === 0 && totalTodo > 0) text += '，加油哦！';
+  else text += '。';
+  text += '\n\n';
+
+  text += `今日习惯打卡：共 ${HABITS.length} 项，完成 ${habitsDone.length} 项`;
+  if (habitsDone.length === HABITS.length) text += '，全部打卡成功！';
+  else text += '。';
+  text += '\n';
+
+  if (habitsDone.length > 0) {
+    text += '已完成：' + habitsDone.map(h => h.name).join('、') + '\n';
+  }
+  const habitsNotDone = HABITS.filter(h => !habitsDone.includes(h));
+  if (habitsNotDone.length > 0) {
+    text += '未完成：' + habitsNotDone.map(h => h.name).join('、') + '\n';
+  }
+
+  const water = dayData.habits['water'] || 0;
+  text += `\n今日喝水 ${water} 杯，`;
+  if (water >= 8) text += '达标！';
+  else text += `还需 ${8 - water} 杯达标。`;
+
+  if (doneTodo === totalTodo && habitsDone.length === HABITS.length && totalTodo > 0) {
+    text += '\n\n今天表现完美，继续保持！';
+  } else if (doneTodo > 0 || habitsDone.length > 0) {
+    text += '\n\n今天有不错的进展，明天继续加油！';
+  } else {
+    text += '\n\n新的一天，从一个小目标开始吧！';
+  }
+
+  document.getElementById('summaryText').textContent = text;
+  document.getElementById('summaryWrap').style.display = 'block';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+document.getElementById('prevMonth').onclick = () => {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  renderCalendar();
+};
+document.getElementById('nextMonth').onclick = () => {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  renderCalendar();
+};
+
+renderCalendar();
+if (selectedDateStr) selectDate(selectedDateStr);
+</script>
+</body>
+</html>
